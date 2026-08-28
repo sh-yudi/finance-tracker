@@ -37,7 +37,6 @@ yarn-error.log*
 pnpm-debug.log*
 .yarn/*
 !.yarn/releases
-package-lock.json
 
 # =====================================
 # Expo / React Native
