@@ -1,0 +1,244 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Category {
+  FOOD
+  TRANSPORT
+  BILLS
+  ENTERTAINMENT
+  SHOPPING
+  HEALTH
+  EDUCATION
+  INVESTMENT
+  DEBT
+  INCOME
+  OTHER
+}
+
+enum SpendType {
+  ESSENTIAL
+  OPTIONAL
+  INVESTMENT
+  DEBT
+  INCOME
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  UPI
+  BANK_TRANSFER
+  ONLINE
+  WALLET
+  OTHER
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum FraudCheckStatus {
+  PENDING
+  CLEAR
+  SUSPECTED
+  CONFIRMED_FRAUD
+}
+
+enum Source {
+  MANUAL
+  PLAID
+  SMS
+  BANK_SYNC
+}
+
+enum LoginProvider {
+  EMAIL
+  GOOGLE
+  APPLE
+}
+
+enum SyncStatus {
+  SYNCED
+  PENDING
+  FAILED
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String?
+  name          String?
+  provider      LoginProvider @default(EMAIL)
+  monthlyIncome Decimal  @default(0) @db.Decimal(12, 2)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  accounts     BankAccount[]
+  expenses     Expense[]
+  transactions Transaction[]
+  reports      DailyReport[]
+  actions      ActionLog[]
+  payees       Payee[]
+}
+
+model BankAccount {
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plaidItemId  String     @unique
+  plaidAccessToken String
+  institutionName String?
+  accountName  String
+  accountMask  String?
+  accountType  String?
+  balance      Decimal    @default(0) @db.Decimal(12, 2)
+  currency     String     @default("USD")
+  syncStatus   SyncStatus @default(PENDING)
+  lastSyncedAt DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  transactions Transaction[]
+}
+
+model Transaction {
+  id           String    @id @default(cuid())
+  accountId    String?
+  account      BankAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount       Decimal   @db.Decimal(12, 2)
+  currency     String    @default("USD")
+  merchantName String?
+  description  String?
+  category     Category?
+  date         DateTime  @default(now())
+  source       Source    @default(MANUAL)
+  externalId   String?   @unique
+  raw          Json?
+  createdAt    DateTime  @default(now())
+}
+
+model Expense {
+  id            String       @id @default(cuid())
+  userId        String
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount        Decimal      @db.Decimal(12, 2)
+  currency      String       @default("USD")
+  category      Category     @default(OTHER)
+  spendType     SpendType    @default(OPTIONAL)
+  paymentMethod PaymentMethod @default(OTHER)
+  recipient     String?
+  payeeId       String?
+  payee         Payee?       @relation(fields: [payeeId], references: [id], onDelete: SetNull)
+  note          String?
+  date          DateTime     @default(now())
+  source        Source       @default(MANUAL)
+  risk          RiskLevel?
+  fraudStatus   FraudCheckStatus @default(PENDING)
+  fraudScore    Int?
+  flags         FraudFlag[]
+  isRecurring   Boolean      @default(false)
+  frequency     String?
+  consequence   String?
+  rating        Int?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([userId, date])
+  @@index([payeeId])
+}
+
+model Payee {
+  id          String       @id @default(cuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  phone       String?
+  upiId       String?
+  bankAccount String?
+  riskLevel   RiskLevel    @default(LOW)
+  riskScore   Int          @default(0)
+  fraudStatus FraudCheckStatus @default(PENDING)
+  lastChecked DateTime?
+  checkCount  Int          @default(0)
+  meta        Json?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  expenses Expense[]
+  flags    FraudFlag[]
+  checks   FraudCheck[]
+
+  @@unique([userId, name])
+  @@index([userId, riskLevel])
+}
+
+model FraudFlag {
+  id        String   @id @default(cuid())
+  payeeId   String?
+  payee     Payee?   @relation(fields: [payeeId], references: [id], onDelete: Cascade)
+  expenseId String?
+  expense   Expense? @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  type      String
+  severity  RiskLevel @default(MEDIUM)
+  reason    String
+  data      Json?
+  createdAt DateTime @default(now())
+
+  @@index([payeeId])
+  @@index([expenseId])
+}
+
+model FraudCheck {
+  id        String   @id @default(cuid())
+  payeeId   String
+  payee     Payee    @relation(fields: [payeeId], references: [id], onDelete: Cascade)
+  provider  String
+  score     Int
+  level     RiskLevel
+  details   Json?
+  createdAt DateTime @default(now())
+
+  @@index([payeeId, createdAt])
+}
+
+model DailyReport {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date         DateTime @db.Date
+  totalSpent   Decimal  @default(0) @db.Decimal(12, 2)
+  totalIncome  Decimal  @default(0) @db.Decimal(12, 2)
+  spendRating  Int?
+  expenseCount Int      @default(0)
+  categoryBreakdown Json
+  topRecipients    Json
+  optionalSpend    Decimal @default(0) @db.Decimal(12, 2)
+  essentialSpend   Decimal @default(0) @db.Decimal(12, 2)
+  savingsTip  String?
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+model ActionLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action    String
+  detail    Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
