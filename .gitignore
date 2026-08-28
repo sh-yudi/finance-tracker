@@ -1,0 +1,109 @@
+# =====================================
+# SECURITY: NEVER COMMIT SECRETS
+# These files contain API keys, passwords,
+# database credentials, and tokens.
+# =====================================
+
+# Environment variables (all secret keys live here)
+.env
+.env.*
+!.env.example
+
+# Plaid / Bank credentials
+*.key
+*.pem
+*.p8
+*.p12
+*.jks
+*.keystore
+
+# Firebase / Google service accounts
+google-services.json
+GoogleService-Info.plist
+firebase-adminsdk.json
+
+# Certificates & signing keys
+*.pptx
+*.mobileprovision
+credentials.json
+google-play-service-account.json
+
+# =====================================
+# Node.js
+# =====================================
+node_modules/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.yarn/*
+!.yarn/releases
+package-lock.json
+
+# =====================================
+# Expo / React Native
+# =====================================
+.expo/
+.expo-shared/
+dist/
+web-build/
+*.orig.*
+*.jks
+*.p8
+*.p12
+ios/
+android/
+*.ipa
+*.apk
+*.aab
+!expo-env.d.ts
+
+# =====================================
+# Build outputs
+# =====================================
+build/
+dist/
+.next/
+out/
+
+# =====================================
+# TypeScript / compiled
+# =====================================
+*.tsbuildinfo
+next-env.d.ts
+
+# =====================================
+# Testing / coverage
+# =====================================
+coverage/
+.nyc_output/
+
+# =====================================
+# Logs
+# =====================================
+logs/
+*.log
+pm2*.log
+
+# =====================================
+# OS / editor
+# =====================================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# =====================================
+# Database dumps / backups
+# =====================================
+*.sql
+*.dump
+*.backup
+
+# =====================================
+# Temporary / local
+# =====================================
+.tmp/
+tmp/
+temp/
+*.tmp
